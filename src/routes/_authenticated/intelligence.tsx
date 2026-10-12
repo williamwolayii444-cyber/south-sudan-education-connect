@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { QueryError } from "@/components/QueryError";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -31,15 +32,18 @@ export const Route = createFileRoute("/_authenticated/intelligence")({
 });
 
 function BiPage() {
-  const { data } = useQuery({
+  const { data, isError, error, refetch } = useQuery({
     queryKey: ["bi-core"],
     queryFn: async () => {
       const [schools, students, teachers, budgets] = await Promise.all([
         supabase.from("schools").select("id, state, capacity"),
-        supabase.from("students").select("id, gender, school_id"),
-        supabase.from("teachers").select("id, school_id, monthly_salary"),
+        supabase.from("students").select("id, gender, school_id, status"),
+        supabase.from("teachers").select("id, school_id, monthly_salary, status"),
         supabase.from("budget_lines").select("state, allocated, spent"),
       ]);
+      for (const res of [schools, students, teachers, budgets]) {
+        if (res.error) throw res.error;
+      }
       return {
         schools: schools.data ?? [],
         students: students.data ?? [],
@@ -50,8 +54,8 @@ function BiPage() {
   });
 
   const schools = data?.schools ?? [];
-  const students = data?.students ?? [];
-  const teachers = data?.teachers ?? [];
+  const students = (data?.students ?? []).filter((s) => s.status === "Enrolled");
+  const teachers = (data?.teachers ?? []).filter((t) => t.status === "Active");
   const budgets = data?.budgets ?? [];
 
   const rows = STATES.map((state) => {
@@ -81,7 +85,7 @@ function BiPage() {
         [r.state, r.schools, r.learners, r.girls, r.teachers, r.ptr, r.allocation].join(","),
       ),
     ].join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
     a.download = `mogei-statistical-return-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -104,11 +108,16 @@ function BiPage() {
       title="Business Intelligence & Reporting (BI)"
       subtitle="Statistical returns by state, exportable for ministry and partner reporting"
     >
-      <div className="mb-5 grid gap-4 sm:grid-cols-4">
+      {isError && (
+        <div className="mb-5">
+          <QueryError error={error} what="statistical returns" onRetry={() => refetch()} />
+        </div>
+      )}
+      <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Schools", value: totals.schools.toLocaleString() },
-          { label: "Learners", value: totals.learners.toLocaleString() },
-          { label: "Teachers", value: totals.teachers.toLocaleString() },
+          { label: "Learners enrolled", value: totals.learners.toLocaleString() },
+          { label: "Active teachers", value: totals.teachers.toLocaleString() },
           { label: "Allocation", value: `SSP ${totals.allocation.toLocaleString()}` },
         ].map((c) => (
           <Card key={c.label} className="rounded-sm">

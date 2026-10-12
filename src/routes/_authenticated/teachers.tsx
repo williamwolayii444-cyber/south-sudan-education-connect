@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { useSchoolLookup } from "@/hooks/useLookups";
 import { RecordManager, type Column, type Field } from "@/components/RecordManager";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -45,18 +44,7 @@ type TeacherRow = {
 const opts = (list: string[]) => list.map((v) => ({ value: v, label: v }));
 
 function TeachersPage() {
-  const { data: schools = [] } = useQuery({
-    queryKey: ["schools"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schools").select("id, name, code").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const schoolOptions = schools.map((s) => ({ value: s.id, label: `${s.name} (${s.code})` }));
-  const schoolName = (id: string | null) =>
-    schools.find((s) => s.id === id)?.name ?? "Unposted";
+  const { options: schoolOptions, nameOf: schoolName } = useSchoolLookup();
 
   const fields: Field[] = [
     { name: "code", label: "Payroll / teacher code", required: true },
@@ -71,7 +59,7 @@ function TeachersPage() {
     { name: "main_subject", label: "Main subject", type: "select", options: opts(SUBJECTS) },
     { name: "employment_status", label: "Employment status", type: "select", options: opts(EMPLOYMENT_STATUS), defaultValue: "Permanent", required: true },
     { name: "grade_level", label: "Salary grade" },
-    { name: "monthly_salary", label: "Monthly salary (SSP)", type: "number", defaultValue: 0 },
+    { name: "monthly_salary", label: "Monthly salary (SSP)", type: "number", defaultValue: 0, min: 0 },
     { name: "licence_number", label: "Teaching licence number" },
     { name: "licence_expiry", label: "Licence expiry", type: "date" },
     { name: "school_id", label: "Posted school", type: "select", options: schoolOptions, span: 2 },
@@ -86,7 +74,7 @@ function TeachersPage() {
     { key: "qualification", header: "Qualification" },
     { key: "main_subject", header: "Subject" },
     { key: "employment_status", header: "Employment" },
-    { key: "school_id", header: "Posted school", render: (r) => schoolName(r.school_id) },
+    { key: "school_id", header: "Posted school", render: (r) => schoolName(r.school_id, "Unposted") },
     {
       key: "monthly_salary",
       header: "Salary (SSP)",

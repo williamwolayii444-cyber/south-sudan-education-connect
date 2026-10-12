@@ -39,14 +39,14 @@ const fields: Field[] = [
   { name: "code", label: "Lesson code", required: true },
   { name: "medium", label: "Media", type: "select", options: opts(LESSON_MEDIA), defaultValue: "Radio", required: true },
   { name: "title", label: "Lesson title", required: true, span: 2 },
-  { name: "subject", label: "Subject", type: "select", options: opts(SUBJECTS) },
-  { name: "class_level", label: "Class level", type: "select", options: opts(CLASS_LEVELS) },
+  { name: "subject", label: "Subject", type: "select", options: opts(SUBJECTS), defaultValue: "English", required: true },
+  { name: "class_level", label: "Class level", type: "select", options: opts(CLASS_LEVELS), defaultValue: "P1", required: true },
   { name: "language", label: "Language", type: "select", options: opts(LESSON_LANGUAGES), defaultValue: "English", required: true },
-  { name: "duration_minutes", label: "Duration (minutes)", type: "number", defaultValue: 30 },
+  { name: "duration_minutes", label: "Duration (minutes)", type: "number", defaultValue: 30, min: 1, max: 600 },
   { name: "broadcast_date", label: "Broadcast / release date", type: "date" },
   { name: "status", label: "Status", type: "select", options: opts(LESSON_STATUS), defaultValue: "Published", required: true },
   { name: "link", label: "Resource link", span: 2, placeholder: "https://…" },
-  { name: "notes", label: "Notes", type: "textarea", span: 2 },
+  { name: "description", label: "Description", type: "textarea", span: 2 },
 ];
 
 const columns: Column<LessonRow>[] = [
@@ -72,7 +72,7 @@ function ElearningPage() {
         singular="Lesson"
         fields={fields}
         columns={columns}
-        searchKeys={["code", "title", "subject", "language", "media_type"]}
+        searchKeys={["code", "title", "subject", "language", "medium", "description"]}
         emptyHint="No lessons published to the platform yet."
       />
     </AppShell>

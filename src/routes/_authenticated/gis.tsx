@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { QueryError } from "@/components/QueryError";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -35,7 +36,13 @@ type Row = {
 };
 
 function GisPage() {
-  const { data: schools = [] } = useQuery({
+  const {
+    data: schools = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["gis-schools"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,14 +61,22 @@ function GisPage() {
     acc[state][county].push(s);
     return acc;
   }, {});
-  const mapped = schools.filter((s) => s.latitude && s.longitude).length;
+  const hasCoords = (s: Row) => s.latitude != null && s.longitude != null;
+  const mapped = schools.filter(hasCoords).length;
 
   return (
     <AppShell
       title="GIS & School Mapping"
       subtitle={`${mapped} of ${schools.length} schools carry verified coordinates`}
     >
-      {schools.length === 0 ? (
+      {isError && (
+        <div className="mb-5">
+          <QueryError error={error} what="school locations" onRetry={() => refetch()} />
+        </div>
+      )}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading school network…</p>
+      ) : schools.length === 0 ? (
         <Card className="rounded-sm">
           <CardContent className="py-16 text-center text-sm text-muted-foreground">
             No schools registered yet. Coordinates captured in the School Management System appear
@@ -103,7 +118,7 @@ function GisPage() {
                             </p>
                             <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                               <MapPin className="size-3" />
-                              {s.latitude && s.longitude
+                              {hasCoords(s)
                                 ? `${Number(s.latitude).toFixed(4)}, ${Number(s.longitude).toFixed(4)}`
                                 : "Coordinates pending survey"}
                             </p>

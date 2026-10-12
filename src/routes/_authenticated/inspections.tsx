@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
-import { RecordManager, type Column, type Field } from "@/components/RecordManager";
+import { useSchoolLookup } from "@/hooks/useLookups";
+import { RecordManager, today, type Column, type Field } from "@/components/RecordManager";
 import { Badge } from "@/components/ui/badge";
 import { INSPECTION_RATINGS, INSPECTION_STATUS, INSPECTION_TYPES } from "@/lib/moges";
 
@@ -37,15 +36,7 @@ type InspRow = {
 const opts = (l: string[]) => l.map((v) => ({ value: v, label: v }));
 
 function InspectionsPage() {
-  const { data: schools = [] } = useQuery({
-    queryKey: ["schools"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schools").select("id, name, code").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const schoolName = (id: string | null) => schools.find((s) => s.id === id)?.name ?? "—";
+  const { options: schoolOptions, nameOf: schoolName } = useSchoolLookup();
 
   const fields: Field[] = [
     { name: "reference", label: "Inspection reference", required: true, placeholder: "e.g. QA/2026/0087" },
@@ -54,12 +45,12 @@ function InspectionsPage() {
       name: "school_id",
       label: "School inspected",
       type: "select",
-      options: schools.map((s) => ({ value: s.id, label: `${s.name} (${s.code})` })),
+      options: schoolOptions,
       span: 2,
     },
     { name: "inspector", label: "Lead inspector" },
-    { name: "visit_date", label: "Visit date", type: "date" },
-    { name: "score", label: "Quality score (0–100)", type: "number", defaultValue: 0 },
+    { name: "visit_date", label: "Visit date", type: "date", defaultValue: today(), required: true },
+    { name: "score", label: "Quality score (0–100)", type: "number", defaultValue: 0, min: 0, max: 100 },
     { name: "rating", label: "Rating", type: "select", options: opts(INSPECTION_RATINGS), defaultValue: "Satisfactory", required: true },
     { name: "status", label: "Status", type: "select", options: opts(INSPECTION_STATUS), defaultValue: "Scheduled", required: true },
     { name: "findings", label: "Findings", type: "textarea", span: 2 },

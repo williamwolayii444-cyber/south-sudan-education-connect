@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { useSchoolLookup, useStudentLookup } from "@/hooks/useLookups";
 import { RecordManager, type Column, type Field } from "@/components/RecordManager";
 import { Badge } from "@/components/ui/badge";
 import { EXAM_SERIES, EXAM_STATUS, GRADES, SUBJECTS } from "@/lib/moges";
@@ -39,25 +38,8 @@ type ExamRow = {
 const opts = (list: string[]) => list.map((v) => ({ value: v, label: v }));
 
 function ExamsPage() {
-  const { data: schools = [] } = useQuery({
-    queryKey: ["schools"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schools").select("id, name, code").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const { data: students = [] } = useQuery({
-    queryKey: ["students-lookup"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, first_name, last_name, code")
-        .order("last_name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { options: schoolOptions, nameOf: schoolName } = useSchoolLookup();
+  const { options: studentOptions } = useStudentLookup();
 
   const fields: Field[] = [
     { name: "candidate_number", label: "Candidate number", required: true },
@@ -69,30 +51,28 @@ function ExamsPage() {
       defaultValue: EXAM_SERIES[0],
       required: true,
     },
-    { name: "exam_year", label: "Examination year", type: "number", defaultValue: new Date().getFullYear(), required: true },
+    { name: "exam_year", label: "Examination year", type: "number", defaultValue: new Date().getFullYear(), required: true, min: 2000, max: 2100 },
     {
       name: "student_id",
       label: "Learner",
       type: "select",
-      options: students.map((s) => ({ value: s.id, label: `${s.first_name} ${s.last_name} (${s.code})` })),
+      options: studentOptions,
       span: 2,
     },
     {
       name: "school_id",
       label: "School",
       type: "select",
-      options: schools.map((s) => ({ value: s.id, label: `${s.name} (${s.code})` })),
+      options: schoolOptions,
       span: 2,
     },
     { name: "centre", label: "Examination centre" },
     { name: "subject", label: "Subject", type: "select", options: opts(SUBJECTS) },
-    { name: "score", label: "Mark (%)", type: "number", defaultValue: 0 },
+    { name: "score", label: "Mark (%)", type: "number", defaultValue: 0, min: 0, max: 100 },
     { name: "grade", label: "Grade", type: "select", options: opts(GRADES), defaultValue: "Pending" },
     { name: "status", label: "Status", type: "select", options: opts(EXAM_STATUS), defaultValue: "Registered", required: true },
     { name: "notes", label: "Remarks", type: "textarea", span: 2 },
   ];
-
-  const schoolName = (id: string | null) => schools.find((s) => s.id === id)?.name ?? "—";
 
   const columns: Column<ExamRow>[] = [
     { key: "candidate_number", header: "Candidate no." },

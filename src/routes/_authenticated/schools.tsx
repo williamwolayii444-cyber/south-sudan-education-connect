@@ -46,10 +46,11 @@ const fields: Field[] = [
   { name: "head_teacher", label: "Head teacher" },
   { name: "phone", label: "Contact phone" },
   { name: "email", label: "Contact email", type: "email" },
-  { name: "capacity", label: "Learner capacity", type: "number", defaultValue: 0 },
-  { name: "established_year", label: "Year established", type: "number" },
-  { name: "latitude", label: "Latitude", type: "number" },
-  { name: "longitude", label: "Longitude", type: "number" },
+  { name: "capacity", label: "Learner capacity", type: "number", defaultValue: 0, min: 0 },
+  { name: "established_year", label: "Year established", type: "number", min: 1900, max: new Date().getFullYear() },
+  // South Sudan lies roughly between 3°N–13°N and 23°E–36°E.
+  { name: "latitude", label: "Latitude", type: "number", step: "any", min: -90, max: 90, placeholder: "e.g. 4.8594" },
+  { name: "longitude", label: "Longitude", type: "number", step: "any", min: -180, max: 180, placeholder: "e.g. 31.5713" },
   { name: "status", label: "Operational status", type: "select", options: opts(SCHOOL_STATUS), defaultValue: "Active", required: true },
   { name: "accredited", label: "Accredited", type: "switch", help: "Meets ministry accreditation standards" },
   { name: "notes", label: "Inspection notes", type: "textarea", span: 2 },
@@ -62,13 +63,14 @@ const columns: Column<SchoolRow>[] = [
   { key: "ownership", header: "Ownership" },
   { key: "state", header: "State" },
   { key: "county", header: "County" },
-  { key: "capacity", header: "Capacity" },
+  { key: "capacity", header: "Capacity", render: (r) => Number(r.capacity ?? 0).toLocaleString() },
   {
     key: "accredited",
     header: "Accredited",
     render: (r) => (
       <Badge variant={r.accredited ? "default" : "outline"}>{r.accredited ? "Yes" : "Pending"}</Badge>
     ),
+    exportValue: (r) => (r.accredited ? "Yes" : "Pending"),
   },
   {
     key: "status",

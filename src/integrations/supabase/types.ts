@@ -20,6 +20,7 @@ export type Database = {
           actor_email: string | null
           actor_id: string | null
           created_at: string
+          details: Json | null
           entity: string
           entity_id: string | null
           id: string
@@ -29,6 +30,7 @@ export type Database = {
           actor_email?: string | null
           actor_id?: string | null
           created_at?: string
+          details?: Json | null
           entity: string
           entity_id?: string | null
           id?: string
@@ -38,6 +40,7 @@ export type Database = {
           actor_email?: string | null
           actor_id?: string | null
           created_at?: string
+          details?: Json | null
           entity?: string
           entity_id?: string | null
           id?: string
@@ -111,6 +114,7 @@ export type Database = {
           class_level: string
           code: string
           copies_distributed: number
+          copies_printed: number
           created_at: string
           created_by: string | null
           edition_year: number | null
@@ -127,6 +131,7 @@ export type Database = {
           class_level?: string
           code: string
           copies_distributed?: number
+          copies_printed?: number
           created_at?: string
           created_by?: string | null
           edition_year?: number | null
@@ -143,6 +148,7 @@ export type Database = {
           class_level?: string
           code?: string
           copies_distributed?: number
+          copies_printed?: number
           created_at?: string
           created_by?: string | null
           edition_year?: number | null
@@ -273,6 +279,7 @@ export type Database = {
       }
       field_reports: {
         Row: {
+          county: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -289,6 +296,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          county?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -305,6 +313,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          county?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -941,6 +950,13 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      set_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

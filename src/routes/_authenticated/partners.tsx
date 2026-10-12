@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { MessageSquare, Plus, Search, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { RecordManager, type Column, type Field } from "@/components/RecordManager";
+import { RecordManager, today, type Column, type Field } from "@/components/RecordManager";
+import { QueryError } from "@/components/QueryError";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,7 +107,7 @@ const emptyReportForm = {
   summary: "",
   body: "",
   status: "Shared",
-  published_on: new Date().toISOString().slice(0, 10),
+  published_on: "",
 };
 
 function PartnersPage() {
@@ -199,7 +200,7 @@ function PartnerReportsWorkspace() {
   const [replySide, setReplySide] = useState("Partner");
 
   const { data: partners = [] } = useQuery({
-    queryKey: ["partners"],
+    queryKey: ["partners", "lookup"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partners")
@@ -215,6 +216,7 @@ function PartnerReportsWorkspace() {
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["partner_reports"],
     queryFn: async () => {
@@ -270,6 +272,7 @@ function PartnerReportsWorkspace() {
     setEditing(null);
     setForm({
       ...emptyReportForm,
+      published_on: today(),
       reference: `PR/${new Date().getFullYear()}/${String(reports.length + 1).padStart(4, "0")}`,
     });
     setFormOpen(true);
@@ -287,7 +290,7 @@ function PartnerReportsWorkspace() {
       summary: report.summary ?? "",
       body: report.body ?? "",
       status: report.status,
-      published_on: report.published_on ?? new Date().toISOString().slice(0, 10),
+      published_on: report.published_on ?? today(),
     });
     setFormOpen(true);
   }
@@ -398,11 +401,7 @@ function PartnerReportsWorkspace() {
         )}
       </div>
 
-      {isError && (
-        <p className="rounded-sm border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {(error as Error)?.message ?? "Could not load partner reports."}
-        </p>
-      )}
+      {isError && <QueryError error={error} what="partner reports" onRetry={() => refetch()} />}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <div className="overflow-hidden rounded-sm border bg-card">
@@ -482,7 +481,7 @@ function PartnerReportsWorkspace() {
                   {selected.period_label && <span>Period: {selected.period_label}</span>}
                   {selected.state && <span>State: {selected.state}</span>}
                   {selected.published_on && (
-                    <span>Published: {format(new Date(selected.published_on), "d MMM yyyy")}</span>
+                    <span>Published: {format(parseISO(selected.published_on), "d MMM yyyy")}</span>
                   )}
                 </div>
                 {selected.summary && <p className="text-sm leading-relaxed">{selected.summary}</p>}

@@ -39,12 +39,13 @@ const fields: Field[] = [
   { name: "code", label: "Item code", required: true },
   { name: "item_type", label: "Item type", type: "select", options: opts(CURRICULUM_TYPES), defaultValue: "Syllabus", required: true },
   { name: "title", label: "Title", required: true, span: 2 },
-  { name: "subject", label: "Subject", type: "select", options: opts(SUBJECTS) },
-  { name: "class_level", label: "Class level", type: "select", options: opts(CLASS_LEVELS) },
-  { name: "edition_year", label: "Edition year", type: "number", defaultValue: new Date().getFullYear() },
+  { name: "subject", label: "Subject", type: "select", options: opts(SUBJECTS), defaultValue: "English", required: true },
+  { name: "class_level", label: "Class level", type: "select", options: opts(CLASS_LEVELS), defaultValue: "P1", required: true },
+  { name: "edition_year", label: "Edition year", type: "number", defaultValue: new Date().getFullYear(), min: 1950, max: 2100 },
+  { name: "publisher", label: "Publisher" },
   { name: "status", label: "Status", type: "select", options: opts(CURRICULUM_STATUS), defaultValue: "Approved", required: true },
-  { name: "copies_printed", label: "Copies printed", type: "number", defaultValue: 0 },
-  { name: "copies_distributed", label: "Copies distributed", type: "number", defaultValue: 0 },
+  { name: "copies_printed", label: "Copies printed", type: "number", defaultValue: 0, min: 0 },
+  { name: "copies_distributed", label: "Copies distributed", type: "number", defaultValue: 0, min: 0 },
   { name: "notes", label: "Notes", type: "textarea", span: 2 },
 ];
 
@@ -79,7 +80,7 @@ function CurriculumPage() {
         singular="Curriculum item"
         fields={fields}
         columns={columns}
-        searchKeys={["code", "title", "item_type", "subject", "class_level"]}
+        searchKeys={["code", "title", "item_type", "subject", "class_level", "publisher"]}
         emptyHint="No curriculum items registered yet."
       />
     </AppShell>

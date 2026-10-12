@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { QueryError } from "@/components/QueryError";
 import { RecordManager, type Column, type Field } from "@/components/RecordManager";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,8 +42,13 @@ const opts = (l: string[]) => l.map((v) => ({ value: v, label: v }));
 const ssp = (n: number) => `SSP ${Math.round(n).toLocaleString()}`;
 
 function FinancePage() {
-  const { data: rows = [] } = useQuery({
-    queryKey: ["budget_lines"],
+  const {
+    data: rows = [],
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["budget_lines", "totals"],
     queryFn: async () => {
       const { data, error } = await supabase.from("budget_lines").select("allocated, spent");
       if (error) throw error;
@@ -62,8 +68,8 @@ function FinancePage() {
     { name: "funding_source", label: "Funding source", type: "select", options: opts(FUNDING_SOURCES), defaultValue: FUNDING_SOURCES[0], required: true },
     { name: "state", label: "State", type: "select", options: opts(STATES) },
     { name: "status", label: "Status", type: "select", options: opts(BUDGET_STATUS), defaultValue: "Approved", required: true },
-    { name: "allocated", label: "Allocated (SSP)", type: "number", defaultValue: 0 },
-    { name: "spent", label: "Expenditure to date (SSP)", type: "number", defaultValue: 0 },
+    { name: "allocated", label: "Allocated (SSP)", type: "number", defaultValue: 0, min: 0 },
+    { name: "spent", label: "Expenditure to date (SSP)", type: "number", defaultValue: 0, min: 0 },
     { name: "notes", label: "Notes", type: "textarea", span: 2 },
   ];
 
@@ -90,6 +96,11 @@ function FinancePage() {
       title="Financial Management System (FMS)"
       subtitle="Budgets, capitation grants and expenditure tracking"
     >
+      {isError && (
+        <div className="mb-5">
+          <QueryError error={error} what="budget totals" onRetry={() => refetch()} />
+        </div>
+      )}
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
         {[
           { label: "Total allocation", value: ssp(allocated) },
@@ -104,7 +115,9 @@ function FinancePage() {
             </CardHeader>
             <CardContent>
               <p className="font-display text-2xl">{c.value}</p>
-              {c.label === "Budget execution" && <Progress value={execution} className="mt-3" />}
+              {c.label === "Budget execution" && (
+                <Progress value={Math.min(execution, 100)} className="mt-3" />
+              )}
             </CardContent>
           </Card>
         ))}

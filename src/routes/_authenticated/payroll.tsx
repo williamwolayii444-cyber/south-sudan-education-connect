@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { QueryError } from "@/components/QueryError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/payroll")({
 const ssp = (n: number) => `SSP ${Math.round(n).toLocaleString()}`;
 
 function PayrollPage() {
-  const { data } = useQuery({
+  const { data, isError, error, refetch } = useQuery({
     queryKey: ["payroll"],
     queryFn: async () => {
       const [teachers, schools] = await Promise.all([
@@ -76,6 +77,11 @@ function PayrollPage() {
       title="Payroll Management System"
       subtitle="Monthly teaching-service wage bill compiled from the teacher register"
     >
+      {isError && (
+        <div className="mb-5">
+          <QueryError error={error} what="payroll data" onRetry={() => refetch()} />
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           { label: "Staff on payroll", value: teachers.length.toLocaleString() },

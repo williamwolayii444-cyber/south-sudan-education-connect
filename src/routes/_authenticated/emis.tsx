@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { QueryError } from "@/components/QueryError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/emis")({
 type S = { id: string; state: string; level: string; status: string };
 
 function EmisPage() {
-  const { data } = useQuery({
+  const { data, isError, error, refetch } = useQuery({
     queryKey: ["emis"],
     queryFn: async () => {
       const [schools, students, teachers] = await Promise.all([
@@ -52,8 +53,8 @@ function EmisPage() {
   });
 
   const schools = data?.schools ?? [];
-  const students = data?.students ?? [];
-  const teachers = data?.teachers ?? [];
+  const students = (data?.students ?? []).filter((s) => s.status === "Enrolled");
+  const teachers = (data?.teachers ?? []).filter((t) => t.status === "Active");
   const stateOf = (schoolId: string | null) =>
     schools.find((s) => s.id === schoolId)?.state ?? "Unassigned";
 
@@ -87,6 +88,11 @@ function EmisPage() {
       title="Education Management Information System (EMIS)"
       subtitle="Aggregated national statistics compiled from the live registries"
     >
+      {isError && (
+        <div className="mb-5">
+          <QueryError error={error} what="EMIS statistics" onRetry={() => refetch()} />
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="rounded-sm">
           <CardHeader>

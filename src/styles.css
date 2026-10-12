@@ -59,7 +59,7 @@
 }
 
 :root {
-  --radius: 0.25rem;
+  --radius: 0.375rem;
   --background: oklch(0.985 0.003 106);
   --foreground: oklch(0.19 0.012 260);
   --card: oklch(1 0 0);
@@ -72,8 +72,9 @@
   --secondary-foreground: oklch(0.24 0.02 260);
   --muted: oklch(0.955 0.006 250);
   --muted-foreground: oklch(0.5 0.015 258);
-  --accent: oklch(0.42 0.11 254);
-  --accent-foreground: oklch(0.98 0.005 106);
+  /* Subtle hover/focus tint used by buttons, menus and selects. Brand blue is --nile. */
+  --accent: oklch(0.95 0.012 250);
+  --accent-foreground: oklch(0.22 0.02 260);
   --destructive: oklch(0.52 0.2 27);
   --destructive-foreground: oklch(0.98 0.005 106);
   --success: oklch(0.5 0.13 152);
@@ -101,6 +102,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.17 0.014 260);
   --foreground: oklch(0.96 0.005 250);
   --card: oklch(0.21 0.018 260);
@@ -113,8 +115,8 @@
   --secondary-foreground: oklch(0.96 0.005 250);
   --muted: oklch(0.27 0.02 260);
   --muted-foreground: oklch(0.7 0.015 255);
-  --accent: oklch(0.55 0.12 254);
-  --accent-foreground: oklch(0.98 0.005 106);
+  --accent: oklch(0.28 0.022 260);
+  --accent-foreground: oklch(0.96 0.005 250);
   --destructive: oklch(0.62 0.19 27);
   --destructive-foreground: oklch(0.98 0.005 106);
   --success: oklch(0.6 0.13 152);
@@ -147,7 +149,13 @@
   }
 
   body {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--color-background) 92%, white) 0%, var(--color-background) 100%);
+    background-color: var(--color-background);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-card) 60%, var(--color-background)) 0%,
+      var(--color-background) 420px
+    );
+    background-repeat: no-repeat;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -163,7 +171,7 @@
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+    background: color-mix(in srgb, var(--color-nile) 30%, transparent);
   }
 }
 
@@ -188,7 +196,35 @@
 }
 
 @utility soft-card {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-card) 96%, var(--color-accent) 4%) 0%, var(--color-card) 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-card) 96%, var(--color-nile) 4%) 0%, var(--color-card) 100%);
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 24px oklch(0.2 0.02 260 / 6%);
+}
+
+.dark .gov-panel,
+.dark .soft-card {
+  box-shadow: none;
+}
+
+/* Recharts: follow the active theme instead of its hard-coded greys. */
+.recharts-cartesian-grid line,
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line {
+  stroke: var(--color-border);
+}
+.recharts-cartesian-axis-tick-value,
+.recharts-legend-item-text {
+  fill: var(--color-muted-foreground);
+}
+.recharts-default-tooltip {
+  background-color: var(--color-popover) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius);
+  color: var(--color-popover-foreground);
+}
+.recharts-pie-label-text {
+  fill: var(--color-foreground);
+}
+.recharts-sector {
+  stroke: var(--color-card);
 }

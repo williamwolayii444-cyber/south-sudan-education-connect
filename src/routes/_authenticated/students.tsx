@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
-import { RecordManager, type Column, type Field } from "@/components/RecordManager";
+import { RecordManager, today, type Column, type Field } from "@/components/RecordManager";
+import { useSchoolLookup } from "@/hooks/useLookups";
 import { Badge } from "@/components/ui/badge";
 import { CLASS_LEVELS, DISABILITIES, GENDERS, STATES, STUDENT_STATUS } from "@/lib/moges";
 
@@ -40,17 +39,7 @@ type StudentRow = {
 const opts = (list: string[]) => list.map((v) => ({ value: v, label: v }));
 
 function StudentsPage() {
-  const { data: schools = [] } = useQuery({
-    queryKey: ["schools"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schools").select("id, name, code").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const schoolOptions = schools.map((s) => ({ value: s.id, label: `${s.name} (${s.code})` }));
-  const schoolName = (id: string | null) => schools.find((s) => s.id === id)?.name ?? "Unassigned";
+  const { options: schoolOptions, nameOf: schoolName } = useSchoolLookup();
 
   const fields: Field[] = [
     { name: "code", label: "Learner code", required: true, placeholder: "e.g. SSD-2026-000145" },
@@ -64,7 +53,7 @@ function StudentsPage() {
     { name: "guardian_phone", label: "Guardian phone" },
     { name: "county_of_origin", label: "State / county of origin", type: "select", options: opts(STATES) },
     { name: "disability", label: "Special needs", type: "select", options: opts(DISABILITIES), defaultValue: "None" },
-    { name: "enrollment_date", label: "Enrolment date", type: "date" },
+    { name: "enrollment_date", label: "Enrolment date", type: "date", defaultValue: today(), required: true },
     { name: "status", label: "Enrolment status", type: "select", options: opts(STUDENT_STATUS), defaultValue: "Enrolled", required: true },
     { name: "notes", label: "Remarks (discipline, health, transfers)", type: "textarea", span: 2 },
   ];
@@ -74,7 +63,7 @@ function StudentsPage() {
     { key: "name", header: "Name", render: (r) => `${r.first_name} ${r.last_name}` },
     { key: "gender", header: "Gender" },
     { key: "class_level", header: "Class" },
-    { key: "school_id", header: "School", render: (r) => schoolName(r.school_id) },
+    { key: "school_id", header: "School", render: (r) => schoolName(r.school_id, "Unassigned") },
     { key: "county_of_origin", header: "Origin" },
     { key: "guardian_name", header: "Guardian" },
     { key: "guardian_phone", header: "Guardian phone" },

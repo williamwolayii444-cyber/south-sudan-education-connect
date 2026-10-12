@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { QueryError } from "@/components/QueryError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 });
 
 function AnalyticsPage() {
-  const { data } = useQuery({
+  const { data, isError, error, refetch } = useQuery({
     queryKey: ["analytics-core"],
     queryFn: async () => {
       const [students, teachers, schools, inspections, budgets] = await Promise.all([
@@ -32,6 +33,9 @@ function AnalyticsPage() {
         supabase.from("inspections").select("id, school_id, rating, score"),
         supabase.from("budget_lines").select("allocated, spent"),
       ]);
+      for (const res of [students, teachers, schools, inspections, budgets]) {
+        if (res.error) throw res.error;
+      }
       return {
         students: students.data ?? [],
         teachers: teachers.data ?? [],
@@ -42,8 +46,9 @@ function AnalyticsPage() {
     },
   });
 
-  const students = data?.students ?? [];
-  const teachers = data?.teachers ?? [];
+  // Indicators use enrolled learners and active teachers, matching the national dashboard.
+  const students = (data?.students ?? []).filter((s) => s.status === "Enrolled");
+  const teachers = (data?.teachers ?? []).filter((t) => t.status === "Active");
   const schools = data?.schools ?? [];
   const inspections = data?.inspections ?? [];
   const budgets = data?.budgets ?? [];
@@ -70,7 +75,7 @@ function AnalyticsPage() {
 
   const alerts = [
     {
-      title: "Schools with no teacher posted",
+      title: "Schools with no active teacher posted",
       count: schoolsWithoutTeachers.length,
       detail: schoolsWithoutTeachers.slice(0, 5).map((s) => s.name).join(", "),
       severity: schoolsWithoutTeachers.length > 0 ? "High" : "Clear",
@@ -100,6 +105,11 @@ function AnalyticsPage() {
       title="Analytics & Early Warning (AI)"
       subtitle="Automated sector indicators and risk alerts drawn from live registries"
     >
+      {isError && (
+        <div className="mb-5">
+          <QueryError error={error} what="sector indicators" onRetry={() => refetch()} />
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {indicators.map((i) => (
           <Card key={i.label} className="soft-card rounded-sm">

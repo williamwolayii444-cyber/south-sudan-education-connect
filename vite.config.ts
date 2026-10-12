@@ -5,7 +5,7 @@ import tailwind from '@tailwindcss/vite';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 
 export default defineConfig({
-  plugins: [TanStackRouterVite(), react(), tsconfigPaths(), tailwind()],
+  plugins: [TanStackRouterVite({ autoCodeSplitting: true }), react(), tsconfigPaths(), tailwind()],
   server: {
     port: 5173,
   },

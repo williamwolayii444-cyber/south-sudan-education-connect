@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { useSchoolLookup, useTeacherLookup } from "@/hooks/useLookups";
 import { RecordManager, type Column, type Field } from "@/components/RecordManager";
 import { Badge } from "@/components/ui/badge";
 import { HR_ACTION_TYPES, HR_STATUS } from "@/lib/moges";
@@ -37,32 +36,8 @@ type HrRow = {
 const opts = (l: string[]) => l.map((v) => ({ value: v, label: v }));
 
 function HrPage() {
-  const { data: schools = [] } = useQuery({
-    queryKey: ["schools"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schools").select("id, name, code").order("name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const { data: teachers = [] } = useQuery({
-    queryKey: ["teachers-lookup"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teachers")
-        .select("id, first_name, last_name, code")
-        .order("last_name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const schoolOpts = schools.map((s) => ({ value: s.id, label: `${s.name} (${s.code})` }));
-  const schoolName = (id: string | null) => schools.find((s) => s.id === id)?.name ?? "—";
-  const teacherName = (id: string | null) => {
-    const t = teachers.find((x) => x.id === id);
-    return t ? `${t.first_name} ${t.last_name}` : "—";
-  };
+  const { options: schoolOpts, nameOf: schoolName } = useSchoolLookup();
+  const { options: teacherOpts, nameOf: teacherName } = useTeacherLookup();
 
   const fields: Field[] = [
     { name: "reference", label: "Action reference", required: true, placeholder: "e.g. HR/2026/0431" },
@@ -71,7 +46,7 @@ function HrPage() {
       name: "teacher_id",
       label: "Officer / teacher",
       type: "select",
-      options: teachers.map((t) => ({ value: t.id, label: `${t.first_name} ${t.last_name} (${t.code})` })),
+      options: teacherOpts,
       span: 2,
     },
     { name: "from_school_id", label: "From school", type: "select", options: schoolOpts },

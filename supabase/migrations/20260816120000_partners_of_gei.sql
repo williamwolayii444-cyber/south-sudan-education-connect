@@ -1,10 +1,12 @@
 -- Partners of General Education and Instruction
 -- Replaces the integrations / API Gateway registry with a partner workspace:
 -- partner organisations, shared reports, and threaded replies.
+-- Safe to re-run: every object is created only if missing.
 
-DROP TABLE IF EXISTS public.integrations CASCADE;
+-- The legacy public.integrations table is intentionally left in place so no existing
+-- records are lost. The app no longer reads it; drop it manually once it is archived.
 
-CREATE TABLE public.partners (
+CREATE TABLE IF NOT EXISTS public.partners (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
@@ -22,21 +24,24 @@ CREATE TABLE public.partners (
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.partners TO authenticated;
 GRANT ALL ON public.partners TO service_role;
 ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS partners_read ON public.partners;
 CREATE POLICY partners_read ON public.partners
   FOR SELECT TO authenticated
   USING (true);
+DROP POLICY IF EXISTS partners_write ON public.partners;
 CREATE POLICY partners_write ON public.partners
   FOR ALL TO authenticated
   USING (public.can_write((SELECT auth.uid())))
   WITH CHECK (public.can_write((SELECT auth.uid())));
+DROP TRIGGER IF EXISTS partners_touch ON public.partners;
 CREATE TRIGGER partners_touch
   BEFORE UPDATE ON public.partners
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
-CREATE INDEX partners_status_idx ON public.partners (status);
-CREATE INDEX partners_type_idx ON public.partners (partner_type);
+CREATE INDEX IF NOT EXISTS partners_status_idx ON public.partners (status);
+CREATE INDEX IF NOT EXISTS partners_type_idx ON public.partners (partner_type);
 
-CREATE TABLE public.partner_reports (
+CREATE TABLE IF NOT EXISTS public.partner_reports (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   reference TEXT NOT NULL,
   title TEXT NOT NULL,
@@ -55,22 +60,25 @@ CREATE TABLE public.partner_reports (
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.partner_reports TO authenticated;
 GRANT ALL ON public.partner_reports TO service_role;
 ALTER TABLE public.partner_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS partner_reports_read ON public.partner_reports;
 CREATE POLICY partner_reports_read ON public.partner_reports
   FOR SELECT TO authenticated
   USING (true);
+DROP POLICY IF EXISTS partner_reports_write ON public.partner_reports;
 CREATE POLICY partner_reports_write ON public.partner_reports
   FOR ALL TO authenticated
   USING (public.can_write((SELECT auth.uid())))
   WITH CHECK (public.can_write((SELECT auth.uid())));
+DROP TRIGGER IF EXISTS partner_reports_touch ON public.partner_reports;
 CREATE TRIGGER partner_reports_touch
   BEFORE UPDATE ON public.partner_reports
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
-CREATE INDEX partner_reports_partner_id_idx ON public.partner_reports (partner_id);
-CREATE INDEX partner_reports_status_idx ON public.partner_reports (status);
-CREATE INDEX partner_reports_published_on_idx ON public.partner_reports (published_on DESC);
+CREATE INDEX IF NOT EXISTS partner_reports_partner_id_idx ON public.partner_reports (partner_id);
+CREATE INDEX IF NOT EXISTS partner_reports_status_idx ON public.partner_reports (status);
+CREATE INDEX IF NOT EXISTS partner_reports_published_on_idx ON public.partner_reports (published_on DESC);
 
-CREATE TABLE public.partner_report_replies (
+CREATE TABLE IF NOT EXISTS public.partner_report_replies (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   report_id UUID NOT NULL REFERENCES public.partner_reports(id) ON DELETE CASCADE,
   author_name TEXT NOT NULL,
@@ -82,17 +90,21 @@ CREATE TABLE public.partner_report_replies (
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.partner_report_replies TO authenticated;
 GRANT ALL ON public.partner_report_replies TO service_role;
 ALTER TABLE public.partner_report_replies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS partner_replies_read ON public.partner_report_replies;
 CREATE POLICY partner_replies_read ON public.partner_report_replies
   FOR SELECT TO authenticated
   USING (true);
 -- Ministry officers manage replies; any authenticated user (including partner viewers) may post a reply.
+DROP POLICY IF EXISTS partner_replies_insert ON public.partner_report_replies;
 CREATE POLICY partner_replies_insert ON public.partner_report_replies
   FOR INSERT TO authenticated
   WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
+DROP POLICY IF EXISTS partner_replies_manage ON public.partner_report_replies;
 CREATE POLICY partner_replies_manage ON public.partner_report_replies
   FOR UPDATE TO authenticated
   USING (public.can_write((SELECT auth.uid())))
   WITH CHECK (public.can_write((SELECT auth.uid())));
+DROP POLICY IF EXISTS partner_replies_delete ON public.partner_report_replies;
 CREATE POLICY partner_replies_delete ON public.partner_report_replies
   FOR DELETE TO authenticated
   USING (
@@ -100,7 +112,7 @@ CREATE POLICY partner_replies_delete ON public.partner_report_replies
     OR created_by = (SELECT auth.uid())
   );
 
-CREATE INDEX partner_report_replies_report_id_idx
+CREATE INDEX IF NOT EXISTS partner_report_replies_report_id_idx
   ON public.partner_report_replies (report_id, created_at);
 
 -- When a partner posts a reply, mark the report as Replied (viewers cannot UPDATE reports via RLS).
@@ -126,6 +138,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS partner_reply_status ON public.partner_report_replies;
 CREATE TRIGGER partner_reply_status
 AFTER INSERT ON public.partner_report_replies
 FOR EACH ROW EXECUTE FUNCTION public.mark_partner_report_replied();

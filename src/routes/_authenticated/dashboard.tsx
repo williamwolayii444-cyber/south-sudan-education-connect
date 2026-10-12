@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { QueryError } from "@/components/QueryError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -42,8 +43,20 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-type Student = { gender: string; class_level: string; school_id: string | null; status: string };
-type Teacher = { gender: string; status: string; monthly_salary: number; school_id: string | null };
+type Student = {
+  id: string;
+  gender: string;
+  class_level: string;
+  school_id: string | null;
+  status: string;
+};
+type Teacher = {
+  id: string;
+  gender: string;
+  status: string;
+  monthly_salary: number;
+  school_id: string | null;
+};
 type SchoolRow = {
   id: string;
   name: string;
@@ -60,8 +73,8 @@ function useStats() {
     queryKey: ["stats"],
     queryFn: async () => {
       const [students, teachers, schools] = await Promise.all([
-        supabase.from("students").select("gender, class_level, school_id, status"),
-        supabase.from("teachers").select("gender, status, monthly_salary, school_id"),
+        supabase.from("students").select("id, gender, class_level, school_id, status"),
+        supabase.from("teachers").select("id, gender, status, monthly_salary, school_id"),
         supabase.from("schools").select("id, name, state, county, level, capacity, status, accredited"),
       ]);
       if (students.error) throw students.error;
@@ -79,15 +92,16 @@ function useStats() {
 const PIE_COLORS = ["var(--color-chart-1)", "var(--color-chart-3)"];
 
 function Dashboard() {
-  const { data, isLoading } = useStats();
+  const { data, isLoading, isError, error, refetch } = useStats();
 
   const students = data?.students ?? [];
   const teachers = data?.teachers ?? [];
   const schools = data?.schools ?? [];
 
   const enrolled = students.filter((s) => s.status === "Enrolled");
+  const activeTeachers = teachers.filter((t) => t.status === "Active");
   const girls = enrolled.filter((s) => s.gender === "Female").length;
-  const ratio = teachers.length ? Math.round(enrolled.length / teachers.length) : 0;
+  const ratio = activeTeachers.length ? Math.round(enrolled.length / activeTeachers.length) : 0;
 
   const byState = Object.entries(
     schools.reduce<Record<string, number>>((acc, s) => {
@@ -106,7 +120,7 @@ function Dashboard() {
 
   const cards = [
     { label: "Learners enrolled", value: enrolled.length, icon: GraduationCap },
-    { label: "Teachers on register", value: teachers.length, icon: Users },
+    { label: "Active teachers", value: activeTeachers.length, icon: Users },
     { label: "Schools registered", value: schools.length, icon: School },
     { label: "Pupil–teacher ratio", value: ratio ? `${ratio}:1` : "—", icon: Percent },
   ];
@@ -118,6 +132,11 @@ function Dashboard() {
       title="National Education Dashboard"
       subtitle="Live indicators drawn from the national registries"
     >
+      {isError && (
+        <div className="mb-5">
+          <QueryError error={error} what="national indicators" onRetry={() => refetch()} />
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <Card key={c.label} className="soft-card rounded-sm">
@@ -127,7 +146,9 @@ function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="font-display text-3xl">{isLoading ? "…" : c.value}</p>
+              <p className="font-display text-3xl tabular-nums">
+                {isLoading ? "…" : typeof c.value === "number" ? c.value.toLocaleString() : c.value}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -145,8 +166,8 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="state" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="var(--color-chart-1)" radius={[2, 2, 0, 0]} />
+                  <Tooltip cursor={{ fill: "var(--color-muted)" }} />
+                  <Bar dataKey="count" name="Schools" fill="var(--color-chart-1)" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
