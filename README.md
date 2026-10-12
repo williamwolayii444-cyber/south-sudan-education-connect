@@ -146,3 +146,4 @@ reset and Google sign-in can return to the app.
 | viewer  | Read-only (default for newly registered accounts)             |
 
 The first account ever created becomes an administrator.
+made some changes 
